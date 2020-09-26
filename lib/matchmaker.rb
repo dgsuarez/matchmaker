@@ -25,7 +25,6 @@ module Matchmaker
   end
 
   class MatchResult
-
     attr_reader :matches, :preferences
 
     def initialize(matches, preferences)
@@ -126,7 +125,6 @@ module Matchmaker
 
   # Multiple slots per group matching
   class MultiMatch
-
     def initialize(preferences, discriminator: Random.new, group_size: 1)
       @preferences = preferences
       @discriminator = discriminator
@@ -136,7 +134,7 @@ module Matchmaker
     def match_result
       slotted_prefs = preferences.transform_values do |groups|
         groups.flat_map do |group|
-          group_size.times.map { |slot| {group: group, slot: slot} }
+          group_size.times.map { |slot| { group: group, slot: slot } }
         end
       end
 

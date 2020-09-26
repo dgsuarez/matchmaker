@@ -111,7 +111,5 @@ RSpec.describe Matchmaker do
 
       expect(multi_match.match_result.matches).to eq(expected)
     end
-
   end
-
 end
