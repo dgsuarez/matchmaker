@@ -3,6 +3,19 @@ require "matchmaker/version"
 module Matchmaker
   class Error < StandardError; end
 
+  def self.match(preferences, rounds: 100)
+    all_matches = 1.upto(rounds).map do |i|
+      Match.new(preferences, discriminator: Random.new(i))
+    end.sort
+
+    best_match = all_matches.first
+    worst_match = all_matches.last
+
+    puts "Did #{rounds} rounds, found #{all_matches.uniq.length} unique matches. Best score: #{best_match.score}. Worst score:  #{worst_match.score}"
+
+    best_match.match
+  end
+
   class Match
     def initialize(preferences, discriminator: Random.new)
       @preferences = preferences
@@ -28,9 +41,23 @@ module Matchmaker
     end
 
     def score
-      individual_scores = match.map { |participant, group| preferences[participant].index(group) }
+      @score ||= begin
+                   individual_scores = match.map { |participant, group| preferences[participant].index(group) }
 
-      [individual_scores.reduce(&:+), variance(individual_scores)]
+                   [individual_scores.reduce(&:+), variance(individual_scores)]
+                 end
+    end
+
+    def <=>(other)
+      score <=> other.score
+    end
+
+    def eql?(other)
+      match == other.match
+    end
+
+    def hash
+      match.hash
     end
 
     private
