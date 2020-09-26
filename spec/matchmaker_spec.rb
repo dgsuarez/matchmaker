@@ -30,7 +30,7 @@ RSpec.describe Matchmaker do
     end
 
     it 'knows its match score' do
-      expect(match_result.score).to match([1, be_within(0.1).of(0.22)])
+      expect(match_result.score).to be_within(0.1).of(0.22)
     end
 
     it 'provides a summary' do
@@ -38,8 +38,10 @@ RSpec.describe Matchmaker do
         Choice 1: 2
         Choice 2: 1
 
-        Total score: 1
-        Variance: 0.22.*
+        Choice sum: .*
+        Choice variance: .*
+
+        Total Score: .*
       EOSUMMARY
       expect(match_result.summary).to match(/#{expected}/)
     end
@@ -54,7 +56,7 @@ RSpec.describe Matchmaker do
       end
 
       it 'knows its match score' do
-        expect(match_result.score).to eq([3, 0.0])
+        expect(match_result.score).to eq(0.0)
       end
     end
   end

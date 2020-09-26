@@ -9,7 +9,7 @@ module Matchmaker
   def self.match(preferences, rounds: 100, group_size: 1, print_summary: false)
     all_matches = 1.upto(rounds).map do |i|
       MultiMatch.new(preferences, discriminator: Random.new(i), group_size: group_size).match_result
-    end
+    end.sort
 
     best_match = all_matches.first
     worst_match = all_matches.last
@@ -25,6 +25,7 @@ module Matchmaker
   end
 
   class MatchResult
+
     attr_reader :matches, :preferences
 
     def initialize(matches, preferences)
@@ -33,11 +34,7 @@ module Matchmaker
     end
 
     def score
-      @score ||= begin
-                   individual_scores = participants.map { |participant| participant_index(participant) }
-
-                   [individual_scores.reduce(&:+), variance(individual_scores)]
-                 end
+      @score ||= score_sum*score_variance
     end
 
     def summary
@@ -52,8 +49,10 @@ module Matchmaker
       <<~EOSUMMARY
         #{choices_summary}
 
-        Total score: #{score.first}
-        Variance: #{score.last}
+        Choice sum: #{score_sum}
+        Choice variance: #{score_variance}
+
+        Total Score: #{score}
       EOSUMMARY
     end
 
@@ -73,6 +72,23 @@ module Matchmaker
 
     def participants
       matches.keys
+    end
+
+    def individual_scores
+      participants.map { |participant| participant_index(participant) }
+    end
+
+    def score_sum
+      individual_scores.reduce(&:+)
+    end
+
+    def score_variance
+      squared_diff_sum = individual_scores.map { |score| (score - mean_score)**2 }.reduce(&:+)
+      squared_diff_sum / individual_scores.size
+    end
+
+    def mean_score
+      individual_scores.reduce(&:+) / individual_scores.length.to_f
     end
 
     def variance(scores)
@@ -125,6 +141,7 @@ module Matchmaker
 
   # Multiple slots per group matching
   class MultiMatch
+
     def initialize(preferences, discriminator: Random.new, group_size: 1)
       @preferences = preferences
       @discriminator = discriminator
@@ -134,7 +151,7 @@ module Matchmaker
     def match_result
       slotted_prefs = preferences.transform_values do |groups|
         groups.flat_map do |group|
-          group_size.times.map { |slot| { group: group, slot: slot } }
+          group_size.times.map { |slot| {group: group, slot: slot} }
         end
       end
 
