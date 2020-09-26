@@ -1,4 +1,22 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'csv'
+
 require 'matchmaker'
+
+group_size = ENV['GROUP_SIZE'] || 1
+rounds = ENV['ROUNDS'] || 1000
+verbose = ENV['VERBOSE']
+
+
+data = CSV.parse(ARGF)
+preferences = data[1..-1].group_by(&:first).transform_values do |values|
+  values.map(&:last)
+end
+
+match = Matchmaker.match(preferences, rounds: rounds, group_size: group_size, print_summary: verbose)
+
+puts
+puts data[0].join(',')
+puts match.map {|row| row.join(',')}.join("\n")
