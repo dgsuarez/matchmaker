@@ -43,6 +43,20 @@ RSpec.describe Matchmaker do
       EOSUMMARY
       expect(match_result.summary).to match(/#{expected}/)
     end
+
+    context 'without full preferences' do
+      let(:preferences) do
+        {
+          participant_1: [],
+          participant_2: [],
+          participant_3: []
+        }
+      end
+
+      it 'knows its match score' do
+        expect(match_result.score).to eq([3, 0.0])
+      end
+    end
   end
 
   describe Matchmaker::SimpleMatch do
@@ -89,8 +103,8 @@ RSpec.describe Matchmaker do
 
     it 'matches preferences' do
       expected = {
-        participant_1: :group_b,
-        participant_2: :group_a,
+        participant_1: :group_a,
+        participant_2: :group_b,
         participant_3: :group_a,
         participant_4: :group_b
       }

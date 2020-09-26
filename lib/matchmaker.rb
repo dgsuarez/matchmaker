@@ -6,10 +6,10 @@ require 'matchmaker/version'
 module Matchmaker
   class Error < StandardError; end
 
-  def self.match(preferences, rounds: 100, print_summary: false)
+  def self.match(preferences, rounds: 100, group_size: 1, print_summary: false)
     all_matches = 1.upto(rounds).map do |i|
-      SimpleMatch.new(preferences, discriminator: Random.new(i)).match_result
-    end.sort
+      MultiMatch.new(preferences, discriminator: Random.new(i), group_size: group_size).match_result
+    end
 
     best_match = all_matches.first
     worst_match = all_matches.last
@@ -35,7 +35,7 @@ module Matchmaker
 
     def score
       @score ||= begin
-                   individual_scores = matches.map { |participant, group| preferences[participant].index(group) }
+                   individual_scores = participants.map { |participant| participant_index(participant) }
 
                    [individual_scores.reduce(&:+), variance(individual_scores)]
                  end
@@ -43,8 +43,8 @@ module Matchmaker
 
     def summary
       choices = Hash.new(0)
-      matches.each do |participant, group|
-        group_index = preferences[participant].index(group)
+      participants.each do |participant|
+        group_index = participant_index(participant)
         choices[group_index + 1] += 1
       end
 
@@ -63,19 +63,28 @@ module Matchmaker
     end
 
     def eql?(other)
-      match == other.match
+      matches == other.matches
     end
 
     def hash
-      match.hash
+      matches.hash
     end
 
     private
+
+    def participants
+      matches.keys
+    end
 
     def variance(scores)
       mean_score = scores.reduce(&:+) / scores.length.to_f
       squared_diff_sum = scores.map { |score| (score - mean_score)**2 }.reduce(&:+)
       squared_diff_sum / scores.size
+    end
+
+    def participant_index(participant)
+      group = matches[participant]
+      preferences[participant].index(group) || preferences[participant].length + 1
     end
   end
 
@@ -126,10 +135,11 @@ module Matchmaker
 
     def match_result
       slotted_prefs = preferences.transform_values do |groups|
-        groups.map do |group|
+        groups.flat_map do |group|
           group_size.times.map { |slot| {group: group, slot: slot} }
         end
       end
+
       slotted_matches = SimpleMatch.new(slotted_prefs, discriminator: discriminator).match_result.matches
       matches = slotted_matches.transform_values do |slotted_group|
         slotted_group[:group]
