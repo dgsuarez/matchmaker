@@ -8,7 +8,7 @@ module Matchmaker
 
   def self.match(preferences, rounds: 100, print_summary: false)
     all_matches = 1.upto(rounds).map do |i|
-      Match.new(preferences, discriminator: Random.new(i))
+      Match.new(preferences, discriminator: Random.new(i)).match_result
     end.sort
 
     best_match = all_matches.first
@@ -21,38 +21,21 @@ module Matchmaker
       puts "Worst match:\n#{worst_match.summary}"
     end
 
-    best_match.match
+    best_match.matches
   end
 
-  # Single deterministic match
-  class Match
-    def initialize(preferences, discriminator: Random.new)
+  class MatchResult
+
+    attr_reader :matches, :preferences
+
+    def initialize(matches, preferences)
+      @matches = matches
       @preferences = preferences
-      @discriminator = discriminator
-      @matches = nil
-    end
-
-    def match
-      return matches if matches
-
-      self.matches = {}
-
-      groups.each do |current_group|
-        best_participant, = preferences
-                            .transform_values { |groups| [groups.index(current_group) || missing_group_score, discriminator.rand] }
-                            .sort_by { |_, group_score| group_score }
-                            .reject { |participant,| matches[participant] }
-                            .first
-
-        matches[best_participant] = current_group
-      end
-
-      matches
     end
 
     def score
       @score ||= begin
-                   individual_scores = match.map { |participant, group| preferences[participant].index(group) }
+                   individual_scores = matches.map { |participant, group| preferences[participant].index(group) }
 
                    [individual_scores.reduce(&:+), variance(individual_scores)]
                  end
@@ -60,7 +43,7 @@ module Matchmaker
 
     def summary
       choices = Hash.new(0)
-      match.each do |participant, group|
+      matches.each do |participant, group|
         group_index = preferences[participant].index(group)
         choices[group_index + 1] += 1
       end
@@ -89,7 +72,38 @@ module Matchmaker
 
     private
 
-    attr_accessor :matches
+    def variance(scores)
+      mean_score = scores.reduce(&:+) / scores.length.to_f
+      squared_diff_sum = scores.map { |score| (score - mean_score)**2 }.reduce(&:+)
+      squared_diff_sum / scores.size
+    end
+  end
+
+  # Single deterministic match
+  class Match
+    def initialize(preferences, discriminator: Random.new)
+      @preferences = preferences
+      @discriminator = discriminator
+    end
+
+    def match_result
+      matches = {}
+
+      groups.each do |current_group|
+        best_participant, = preferences
+                            .transform_values { |groups| [groups.index(current_group) || missing_group_score, discriminator.rand] }
+                            .sort_by { |_, group_score| group_score }
+                            .reject { |participant,| matches[participant] }
+                            .first
+
+        matches[best_participant] = current_group
+      end
+
+      MatchResult.new(matches, preferences)
+    end
+
+    private
+
     attr_reader :preferences, :discriminator
 
     def groups
@@ -99,15 +113,33 @@ module Matchmaker
     def missing_group_score
       groups.length + 1
     end
-
-    def variance(scores)
-      mean_score = scores.reduce(&:+) / scores.length.to_f
-      squared_diff_sum = scores.map { |score| (score - mean_score)**2 }.reduce(&:+)
-      squared_diff_sum / scores.size
-    end
   end
 
-  def self.generate_match(preferences, discriminator:)
-    Match.new(preferences, discriminator: discriminator).match
+  # Multiple slots per group matching
+  class MultiMatch
+
+    def initialize(preferences, discriminator: Random.new, group_size: 1)
+      @preferences = preferences
+      @discriminator = discriminator
+      @group_size = group_size
+    end
+
+    def match_result
+      slotted_prefs = preferences.transform_values do |groups|
+        groups.map do |group|
+          group_size.times.map { |slot| {group: group, slot: slot} }
+        end
+      end
+      slotted_matches = Match.new(slotted_prefs, discriminator: discriminator).match_result.matches
+      matches = slotted_matches.transform_values do |slotted_group|
+        slotted_group[:group]
+      end
+
+      MatchResult.new(matches, preferences)
+    end
+
+    private
+
+    attr_reader :preferences, :discriminator, :group_size
   end
 end
