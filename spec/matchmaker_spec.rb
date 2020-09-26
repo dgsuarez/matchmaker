@@ -37,6 +37,17 @@ RSpec.describe Matchmaker do
       expect(single_match.score).to match([1, be_within(0.1).of(0.22)])
     end
 
+    it 'provides a summary' do
+      expected = <<~EOSUMMARY
+        Choice 1: 2
+        Choice 2: 1
+
+        Total score: 1
+        Variance: 0.22.*
+      EOSUMMARY
+      expect(single_match.summary).to match(/#{expected}/)
+    end
+
     context 'with a different discriminator' do
       let(:discriminator) { Random.new(321) }
 
