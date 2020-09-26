@@ -1,12 +1,13 @@
+# frozen_string_literal: true
+
 RSpec.describe Matchmaker do
   let(:preferences) do
     {
-      participant_1: [:group_a, :group_b, :group_c],
-      participant_2: [:group_c, :group_a],
-      participant_3: [:group_a, :group_c, :group_b],
+      participant_1: %i[group_a group_b group_c],
+      participant_2: %i[group_c group_a],
+      participant_3: %i[group_a group_c group_b]
     }
   end
-
 
   it 'gets the best match' do
     expected = {
@@ -17,7 +18,6 @@ RSpec.describe Matchmaker do
 
     expect(Matchmaker.match(preferences)).to eq(expected)
   end
-
 
   describe Matchmaker::Match do
     let(:discriminator) { Random.new(1) }

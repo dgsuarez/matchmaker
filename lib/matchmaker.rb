@@ -1,5 +1,8 @@
-require "matchmaker/version"
+# frozen_string_literal: true
 
+require 'matchmaker/version'
+
+# Bruteforce matchmaking
 module Matchmaker
   class Error < StandardError; end
 
@@ -21,6 +24,7 @@ module Matchmaker
     best_match.match
   end
 
+  # Single deterministic match
   class Match
     def initialize(preferences, discriminator: Random.new)
       @preferences = preferences
@@ -30,14 +34,15 @@ module Matchmaker
 
     def match
       return matches if matches
+
       self.matches = {}
 
       groups.each do |current_group|
-        best_participant, = preferences.
-          transform_values {|groups| [groups.index(current_group) || missing_group_score, discriminator.rand] }
-          .sort_by { |_, group_score| group_score }
-          .reject { |participant,| matches[participant] }
-          .first
+        best_participant, = preferences
+                            .transform_values { |groups| [groups.index(current_group) || missing_group_score, discriminator.rand] }
+                            .sort_by { |_, group_score| group_score }
+                            .reject { |participant,| matches[participant] }
+                            .first
 
         matches[best_participant] = current_group
       end
@@ -57,10 +62,10 @@ module Matchmaker
       choices = Hash.new(0)
       match.each do |participant, group|
         group_index = preferences[participant].index(group)
-        choices[group_index+1] += 1
+        choices[group_index + 1] += 1
       end
 
-      choices_summary = choices.sort.map {|choice, count| "Choice #{choice}: #{count}" }.join("\n")
+      choices_summary = choices.sort.map { |choice, count| "Choice #{choice}: #{count}" }.join("\n")
 
       <<~EOSUMMARY
         #{choices_summary}
@@ -98,9 +103,8 @@ module Matchmaker
     def variance(scores)
       mean_score = scores.reduce(&:+) / scores.length.to_f
       squared_diff_sum = scores.map { |score| (score - mean_score)**2 }.reduce(&:+)
-      squared_diff_sum/scores.size
+      squared_diff_sum / scores.size
     end
-
   end
 
   def self.generate_match(preferences, discriminator:)
