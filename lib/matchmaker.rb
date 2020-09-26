@@ -8,7 +8,7 @@ module Matchmaker
 
   def self.match(preferences, rounds: 100, print_summary: false)
     all_matches = 1.upto(rounds).map do |i|
-      Match.new(preferences, discriminator: Random.new(i)).match_result
+      SimpleMatch.new(preferences, discriminator: Random.new(i)).match_result
     end.sort
 
     best_match = all_matches.first
@@ -80,7 +80,7 @@ module Matchmaker
   end
 
   # Single deterministic match
-  class Match
+  class SimpleMatch
     def initialize(preferences, discriminator: Random.new)
       @preferences = preferences
       @discriminator = discriminator
@@ -130,7 +130,7 @@ module Matchmaker
           group_size.times.map { |slot| {group: group, slot: slot} }
         end
       end
-      slotted_matches = Match.new(slotted_prefs, discriminator: discriminator).match_result.matches
+      slotted_matches = SimpleMatch.new(slotted_prefs, discriminator: discriminator).match_result.matches
       matches = slotted_matches.transform_values do |slotted_group|
         slotted_group[:group]
       end

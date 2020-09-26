@@ -45,7 +45,7 @@ RSpec.describe Matchmaker do
     end
   end
 
-  describe Matchmaker::Match do
+  describe Matchmaker::SimpleMatch do
     let(:discriminator) { Random.new(1) }
     subject(:single_match) { described_class.new(preferences, discriminator: discriminator) }
 
